@@ -35,11 +35,25 @@ S: 221 Bye
  */
 
 
+int get_sockaddr_fqdn(struct addrinfo *res, char *fqdn, char *port){
+  int gai;
+  struct addrinfo hints = {0};
+
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  gai = getaddrinfo(fqdn, port, &hints, &res);
+  if(gai != 0)
+    printf("gai: %s\n", gai_strerror(gai));
+
+  return gai;
+}
+
 int main(int argc, char* argv[]){
   const char *port = "25";
   const short port_short = 25;
   struct sockaddr_in peer_addr;
-  struct addrinfo hints = {0}, *res;
+  struct addrinfo *res;
   socklen_t peer_addr_len = sizeof(peer_addr);
   int gai, s_fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -48,23 +62,10 @@ int main(int argc, char* argv[]){
     return EXIT_FAILURE;
   }
 
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-
   peer_addr.sin_family = AF_INET;
   peer_addr.sin_port = htons(port_short);
   peer_addr.sin_addr = (struct in_addr){htonl(2130706433)}; //127.0.0.1 as a long
 
-  /*
-  gai = getaddrinfo("localhost", port, &hints, &res);
-  if(gai != 0){
-    printf("gai: %s\n", gai_strerror(gai));
-    return -1;
-  }
-
-  struct sockaddr_in *res_saddr = (struct sockaddr_in *)res->ai_addr;
-  printf("my addr is: %ld - gai addr is: %ld\n", ntohl(peer_addr.sin_addr.s_addr), ntohl(res_saddr->sin_addr.s_addr));
-  */
 
   if(connect(s_fd, (struct sockaddr *)&peer_addr, peer_addr_len)<0){
     perror("connect");
