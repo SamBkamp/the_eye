@@ -35,14 +35,14 @@ S: 221 Bye
  */
 
 
-int get_sockaddr_fqdn(struct addrinfo *res, char *fqdn, char *port){
+int get_sockaddr_fqdn(struct addrinfo **res, char *fqdn, char *port){
   int gai;
   struct addrinfo hints = {0};
 
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
-  gai = getaddrinfo(fqdn, port, &hints, &res);
+  gai = getaddrinfo(fqdn, port, &hints, res);
   if(gai != 0)
     printf("gai: %s\n", gai_strerror(gai));
 
@@ -52,7 +52,7 @@ int get_sockaddr_fqdn(struct addrinfo *res, char *fqdn, char *port){
 int main(int argc, char* argv[]){
   const char *port = "25";
   const short port_short = 25;
-  struct sockaddr_in peer_addr;
+  struct sockaddr_in peer_addr, *resolved_addr;
   struct addrinfo *res;
   socklen_t peer_addr_len = sizeof(peer_addr);
   int gai, s_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -61,17 +61,25 @@ int main(int argc, char* argv[]){
     perror("socket");
     return EXIT_FAILURE;
   }
-
+  /*
   peer_addr.sin_family = AF_INET;
   peer_addr.sin_port = htons(port_short);
   peer_addr.sin_addr = (struct in_addr){htonl(2130706433)}; //127.0.0.1 as a long
+  */
 
+  gai = get_sockaddr_fqdn(&res, "localhost", "25");
+  if(gai != 0){
+    perror("get sockaddr fqdn");
+    return 1;
+  }
 
-  if(connect(s_fd, (struct sockaddr *)&peer_addr, peer_addr_len)<0){
+  if(connect(s_fd, res->ai_addr, res->ai_addrlen)<0){
     perror("connect");
     freeaddrinfo(res);
     return EXIT_FAILURE;
   }
+  freeaddrinfo(res);
+
   char data[1024];
   int bytes_read = read(s_fd, data, 1023);
   if(bytes_read < 0){
