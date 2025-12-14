@@ -5,6 +5,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
 /*
 EXAMPLE EXCHANGE (from wikipedia article {{Simple_Mail_Transfer_Protocol}}):
 S: 220 smtp.example.com ESMTP Postfix
@@ -34,6 +35,51 @@ C: QUIT
 S: 221 Bye
  */
 
+#define LINE_END "\r\n"
+
+enum message_index{
+  HELO,
+  MAIL_FROM,
+  RCPT_TO,
+  DATA,
+  QUIT
+};
+
+const char *message_prefixes[] = {
+  "HELO ",
+  "MAIL FROM: ",
+  "RCPT TO: ",
+  "DATA ",
+  "QUIT"
+};
+
+typedef struct{
+  char *code;
+  char *content;
+}res_message;
+
+typedef struct{
+  enum message_index prefix;
+  char *message_content;
+}req_message;
+
+void send_directive(enum message_index step, char *argv){
+  fputs(message_prefixes[step], stdout);
+  if(argv != NULL)
+    fputs(argv, stdout);
+  fputs(LINE_END, stdout);
+}
+
+int print_response(res_message *res_msg){
+  return printf("greeting: %s - %s\n", res_msg->code, res_msg->content);
+}
+
+int parse_response(res_message *res, char *raw){
+  res->code = raw;
+  *(raw+3) = 0;
+  res->content = raw+4;
+  return 0;
+}
 
 int get_sockaddr_fqdn(struct addrinfo **res, char *fqdn, char *port){
   int gai;
@@ -49,72 +95,47 @@ int get_sockaddr_fqdn(struct addrinfo **res, char *fqdn, char *port){
   return gai;
 }
 
-int main(int argc, char* argv[]){
-  const char *port = "25";
-  const short port_short = 25;
-  struct sockaddr_in peer_addr, *resolved_addr;
-  struct addrinfo *res;
-  socklen_t peer_addr_len = sizeof(peer_addr);
-  int gai, s_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-  if(s_fd < 0){
-    perror("socket");
-    return EXIT_FAILURE;
+int connect_to_service(){
+  struct addrinfo *res;
+  int gai, sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfd < 0){
+    return -1;
   }
-  /*
-  peer_addr.sin_family = AF_INET;
-  peer_addr.sin_port = htons(port_short);
-  peer_addr.sin_addr = (struct in_addr){htonl(2130706433)}; //127.0.0.1 as a long
-  */
 
   gai = get_sockaddr_fqdn(&res, "localhost", "25");
   if(gai != 0){
-    perror("get sockaddr fqdn");
-    return 1;
+    return -1;
   }
 
-  if(connect(s_fd, res->ai_addr, res->ai_addrlen)<0){
-    perror("connect");
+  if(connect(sockfd, res->ai_addr, res->ai_addrlen)<0){
     freeaddrinfo(res);
-    return EXIT_FAILURE;
+    return -1;
   }
   freeaddrinfo(res);
+  return sockfd;
+}
 
-  char data[1024];
-  int bytes_read = read(s_fd, data, 1023);
-  if(bytes_read < 0){
-    perror("read");
+int main(int argc, char* argv[]){
+  const char *port = "25";
+  char *domain = "erm";
+  char *from = "<sam@bonnekamp.com>";
+  char *recipient = "<inbox@bonnekamp.com>";
+  int s_fd;
+  enum message_index step = HELO;
+  char *serialized_args[] = {domain, from, recipient, NULL, NULL};
+
+
+  s_fd = connect_to_service();
+  if(s_fd < 0){
+    perror("connecting to service");
     return EXIT_FAILURE;
   }
-  data[bytes_read] = 0;
-  puts(data);
-  char *messages[] = {
-    "HELO example.com\r\n",
-    "MAIL FROM:<program@example.com>\r\n",
-    "RCPT TO:<sam@fish>\r\n",
-    "DATA\r\n",
-    "From: \"your program\" <program@example.com>\r\n",
-    "To: \"Sam Fish\" <sam@fish>\r\n",
-    "Date: Sat, 13 Dec 2025 14:00 +0800\r\n",
-    "Subject: Your program is speaking!\r\n",
-    "\r\n",
-    "Hello!\r\n",
-    "bye\r\n",
-    ".\r\n",
-    "QUIT\r\n",
-    NULL
-  };
-  for(int i = 0; i < 4; i++){
-    write(s_fd, messages[i], strlen(messages[i]));
-    data[read(s_fd, data, 1023)] = 0;
-    puts(data);
+  while(step <= QUIT){
+    send_directive(step, serialized_args[step]);
+    step++;
   }
 
-  for(int i = 0; i < 8; i++){
-    write(s_fd, messages[i+4], strlen(messages[i+4]));
-  }
 
-  write(s_fd, messages[12], strlen(messages[12]));
-  data[read(s_fd, data, 1023)] = 0;
-  puts(data);
+  return EXIT_SUCCESS;
 }
