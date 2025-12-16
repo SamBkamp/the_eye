@@ -47,13 +47,14 @@ enum message_index{
 
 const char *message_prefixes[] = {
   "HELO ",
-  "MAIL FROM: ",
-  "RCPT TO: ",
-  "DATA ",
+  "MAIL FROM:",
+  "RCPT TO:",
+  "DATA",
   "QUIT"
 };
 
 typedef struct{
+  uint16_t code_int;
   char *code;
   char *content;
 }res_message;
@@ -63,21 +64,32 @@ typedef struct{
   char *message_content;
 }req_message;
 
-void send_directive(enum message_index step, char *argv){
-  fputs(message_prefixes[step], stdout);
+
+int send_body(int fd, char *data){
+  if(write(fd, data, strlen(data))<0) return -1;
+  return 0;
+}
+
+int send_directive(int fd, enum message_index step, char *argv){
+  //you have to send the whole message in one write(), can't split it into multiple writes like http
+  char built_message[1024];
+  strcpy(built_message, message_prefixes[step]);
   if(argv != NULL)
-    fputs(argv, stdout);
-  fputs(LINE_END, stdout);
+    strcat(built_message, argv);
+  strcat(built_message, LINE_END);
+
+  write(fd, built_message, strlen(built_message));
 }
 
 int print_response(res_message *res_msg){
-  return printf("greeting: %s - %s\n", res_msg->code, res_msg->content);
+  return printf("%s  %s", res_msg->code, res_msg->content);
 }
 
 int parse_response(res_message *res, char *raw){
   res->code = raw;
   *(raw+3) = 0;
   res->content = raw+4;
+  res->code_int = atoi(res->code);
   return 0;
 }
 
@@ -93,6 +105,17 @@ int get_sockaddr_fqdn(struct addrinfo **res, char *fqdn, char *port){
     printf("gai: %s\n", gai_strerror(gai));
 
   return gai;
+}
+
+int read_and_parse(int fd, res_message *res){
+  char response_data[1024];
+  int bytes_read = read(fd, response_data, 1023);
+  response_data[bytes_read] = 0;
+
+  if(bytes_read >= 0)
+    parse_response(res, response_data);
+
+  return bytes_read;
 }
 
 
@@ -118,12 +141,13 @@ int connect_to_service(){
 
 int main(int argc, char* argv[]){
   const char *port = "25";
-  char *domain = "erm";
-  char *from = "<sam@bonnekamp.com>";
-  char *recipient = "<inbox@bonnekamp.com>";
-  int s_fd;
+  char *domain = "bonnekamp.com";
+  char *from = "<test@bonnekamp.com>";
+  char *recipient = "<sam@fish>";
+  int s_fd = fileno(stdout);
   enum message_index step = HELO;
   char *serialized_args[] = {domain, from, recipient, NULL, NULL};
+  char *data = "From: \"Bob Example\" <bob@example.org>\r\nTo: \"Alice Example\" <alice@example.com>\r\nDate: Tue, 15 Jan 2008\r\nSubject:Test message\r\n\r\nHello Alice.\r\nThis is a test message!\r\n.\r\n";
 
 
   s_fd = connect_to_service();
@@ -131,8 +155,24 @@ int main(int argc, char* argv[]){
     perror("connecting to service");
     return EXIT_FAILURE;
   }
+
   while(step <= QUIT){
-    send_directive(step, serialized_args[step]);
+    res_message res;
+
+    read_and_parse(s_fd, &res);
+
+    if(res.code_int != 220 && res.code_int != 250 && res.code_int != 354){
+      puts("something went wrong");
+      printf("got code: %d\n", res.code_int);
+      break;
+    }
+
+    print_response(&res);
+    send_directive(s_fd, step, serialized_args[step]);
+    send_directive(fileno(stdout), step, serialized_args[step]);
+
+    if(step == DATA)
+      send_body(s_fd, data);
     step++;
   }
 
