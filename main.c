@@ -64,6 +64,13 @@ typedef struct{
   char *message_content;
 }req_message;
 
+typedef struct{
+  char *my_domain;
+  char *from;
+  char *to;
+  char *peer_domain;
+  char *port;
+}config;
 
 int send_body(int fd, char *data){
   if(write(fd, data, strlen(data))<0) return -1;
@@ -107,8 +114,13 @@ int get_sockaddr_fqdn(struct addrinfo **res, char *fqdn, char *port){
   return gai;
 }
 
+void free_message_data(res_message *res){
+  free(res->code);
+  return;
+}
+
 int read_and_parse(int fd, res_message *res){
-  char response_data[1024];
+  char *response_data = malloc(1024);
   int bytes_read = read(fd, response_data, 1023);
   response_data[bytes_read] = 0;
 
@@ -119,14 +131,14 @@ int read_and_parse(int fd, res_message *res){
 }
 
 
-int connect_to_service(){
+int connect_to_service(char *domain, char *port){
   struct addrinfo *res;
   int gai, sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfd < 0){
     return -1;
   }
 
-  gai = get_sockaddr_fqdn(&res, "localhost", "25");
+  gai = get_sockaddr_fqdn(&res, domain, port);
   if(gai != 0){
     return -1;
   }
@@ -139,40 +151,49 @@ int connect_to_service(){
   return sockfd;
 }
 
+
 int main(int argc, char* argv[]){
-  const char *port = "25";
-  char *domain = "bonnekamp.com";
-  char *from = "<test@bonnekamp.com>";
-  char *recipient = "<sam@fish>";
-  int s_fd = fileno(stdout);
+  config cfg = {
+    .my_domain = "bonnekamp.com",
+    .from = "test@bonnekamp.com",
+    .to = "sam@fish",
+    .peer_domain = "fish",
+    .port = "25"
+  };
+  res_message res = {0};
+  int s_fd;
   enum message_index step = HELO;
-  char *serialized_args[] = {domain, from, recipient, NULL, NULL};
+  char *serialized_args[] = {cfg.my_domain, cfg.from, cfg.to, NULL, NULL};
   char *data = "From: \"Bob Example\" <bob@example.org>\r\nTo: \"Alice Example\" <alice@example.com>\r\nDate: Tue, 15 Jan 2008\r\nSubject:Test message\r\n\r\nHello Alice.\r\nThis is a test message!\r\n.\r\n";
 
 
-  s_fd = connect_to_service();
+  s_fd = connect_to_service(cfg.peer_domain, cfg.port);
   if(s_fd < 0){
     perror("connecting to service");
     return EXIT_FAILURE;
   }
 
+  read_and_parse(s_fd, &res);
+  print_response(&res);
+  free_message_data(&res);
+
   while(step <= QUIT){
-    res_message res;
-
-    read_and_parse(s_fd, &res);
-
-    if(res.code_int != 220 && res.code_int != 250 && res.code_int != 354){
-      puts("something went wrong");
-      printf("got code: %d\n", res.code_int);
-      break;
-    }
-
-    print_response(&res);
     send_directive(s_fd, step, serialized_args[step]);
     send_directive(fileno(stdout), step, serialized_args[step]);
 
+    read_and_parse(s_fd, &res);
+    print_response(&res);
+    if(res.code_int != 220 && res.code_int != 250 && res.code_int != 354){
+      puts("something went wrong");
+      printf("got code: %d\n", res.code_int);
+      free_message_data(&res);
+      break;
+    }
+
+    free_message_data(&res);
     if(step == DATA)
       send_body(s_fd, data);
+
     step++;
   }
 
