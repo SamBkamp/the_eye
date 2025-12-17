@@ -82,7 +82,11 @@ int send_directive(int fd, enum message_index step, char *argv){
 
 
 int main(int argc, char* argv[]){
-  int ping_result = ping();
+  int ping_result = ping("sam-bonnekamp.com"), s_fd;
+  char *data;
+  char *serialized_args[] = {cfg.my_domain, cfg.from, cfg.to, NULL, NULL};
+  res_message res = {0};
+  enum message_index step = HELO;
   config cfg = {
     .my_domain = "bonnekamp.com",
     .from = "test@bonnekamp.com",
@@ -90,11 +94,6 @@ int main(int argc, char* argv[]){
     .peer_domain = "fish",
     .port = "25"
   };
-  char *data;
-  res_message res = {0};
-  int s_fd;
-  enum message_index step = HELO;
-  char *serialized_args[] = {cfg.my_domain, cfg.from, cfg.to, NULL, NULL};
 
   if(ping_result < 0)
     data = format_data(&cfg, "your server is down!");

@@ -9,20 +9,25 @@
 
 #include "connections.h"
 
-int ping(){
-  const char basic_req[]= "GET / HTTP/1.1\r\nHost: sam-bonnekamp.com\r\nConnection: close\r\n";
+int ping(char *fqdn){
+  const char basic_req[]= "GET / HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n";
   char res[1024];
-  int sock = connect_to_service("sam-bonnekamp.com", "80");
+  int bytes_printed = snprintf(res, 1024, basic_req, fqdn);
+  ssize_t bytes_written, bytes_read;
+  int sock = connect_to_service(fqdn, "80");
+  
   if(sock < 0){
     perror("couldn't connect to server");
     return -1;
   }
-  ssize_t bytes_written = write(sock, basic_req, sizeof(basic_req));
+  
+  bytes_written = write(sock, res, bytes_printed);
   if(bytes_written < 0){
     perror("couldn't write");
     return -1;
   }
-  ssize_t bytes_read = read(sock, res, 1023);
+  
+  bytes_read = read(sock, res, 1023);
   if(bytes_read < 0){
     perror("couldn't read");
     return -1;

@@ -1,6 +1,6 @@
 #ifndef EYE_PING
 #define EYE_PING
 
-int ping();
+int ping(char *fqdn);
 
 #endif
