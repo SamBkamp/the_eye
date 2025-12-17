@@ -14,14 +14,14 @@ int format_time(char *buf, size_t buf_size){
   return 0;
 }
 
-char *format_data(config *cfg){
+char *format_data(config *cfg, char *body){
   char format[] = "From: \"%s\" <%s>\r\nTo: \"%s\" <%s>\r\nDate: %s\r\nSubject:%s\r\n\r\n%s\r\n.\r\n";
   size_t format_len = sizeof(format);
   char *data = malloc(format_len+512);
   char time_buffer[100];
 
   format_time(time_buffer, sizeof(time_buffer));
-  snprintf(data, format_len+512, format, cfg->from, cfg->from, cfg->to, cfg->to, time_buffer, "erm", "HAI");
+  snprintf(data, format_len+512, format, cfg->from, cfg->from, cfg->to, cfg->to, time_buffer, "erm", body);
   return data;
 }
 

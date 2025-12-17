@@ -19,5 +19,5 @@ typedef struct{
 int read_and_parse(int fd, res_message *res);
 int print_response(res_message *res_msg);
 int parse_response(res_message *res, char *raw);
-char *format_data(config *cfg);
+char *format_data(config *cfg, char *body);
 #endif
