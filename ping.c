@@ -32,8 +32,10 @@ int ping(char *fqdn){
     perror("couldn't read");
     return -1;
   }
+  /*
   res[bytes_read] = 0;
   fputs(res, stdout);
   fflush(stdout);
+  */
   return 0;
 }

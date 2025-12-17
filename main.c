@@ -7,6 +7,8 @@
 #include <string.h>
 #include <stdint.h>
 
+#include <openssl/ssl.h>
+
 #include "formatting.h"
 #include "connections.h"
 #include "ping.h"
@@ -88,8 +90,8 @@ int main(int argc, char* argv[]){
   enum message_index step = HELO;
   config cfg = {
     .my_domain = "bonnekamp.com",
-    .from = "test@bonnekamp.com",
-    .to = "sam@fish",
+    .from = "<test@bonnekamp.com>",
+    .to = "<sam@fish>",
     .peer_domain = "fish",
     .port = "25"
   };
@@ -98,13 +100,23 @@ int main(int argc, char* argv[]){
   if(ping_result < 0)
     data = format_data(&cfg, "your server is down!");
   else
-    data = format_data(&cfg, "server is up :3");
+    data = format_data(&cfg, "Hi Sam,\r\n your server is up :3\r\nGreetings: your server");
 
   s_fd = connect_to_service(cfg.peer_domain, cfg.port);
   if(s_fd < 0){
     perror("connecting to service");
     return EXIT_FAILURE;
   }
+  char upgrade[] = "STARTTLS";
+  write(s_fd, upgrade, sizeof(upgrade));
+  char return_data[1024];
+  int r = read(s_fd, return_data, 1023);
+  return_data[r] = 0;
+  puts(return_data);
+  //upgrade to ssl connection
+  SSL *ssl = upgrade_connection(s_fd);
+  if(!ssl)
+    return EXIT_FAILURE;
 
   read_and_parse(s_fd, &res);
   print_response(&res);
@@ -112,7 +124,7 @@ int main(int argc, char* argv[]){
 
   while(step <= QUIT){
     send_directive(s_fd, step, serialized_args[step]);
-    send_directive(fileno(stdout), step, serialized_args[step]);
+    //send_directive(fileno(stdout), step, serialized_args[step]);
 
     read_and_parse(s_fd, &res);
     print_response(&res);
