@@ -107,20 +107,17 @@ int main(int argc, char* argv[]){
     perror("connecting to service");
     return EXIT_FAILURE;
   }
-  char upgrade[] = "STARTTLS";
-  write(s_fd, upgrade, sizeof(upgrade));
-  char return_data[1024];
-  int r = read(s_fd, return_data, 1023);
-  return_data[r] = 0;
-  puts(return_data);
+
+  read_and_parse(s_fd, &res);
+  print_response(&res);
+  free_message_data(&res);
+
+
   //upgrade to ssl connection
   SSL *ssl = upgrade_connection(s_fd);
   if(!ssl)
     return EXIT_FAILURE;
 
-  read_and_parse(s_fd, &res);
-  print_response(&res);
-  free_message_data(&res);
 
   while(step <= QUIT){
     send_directive(s_fd, step, serialized_args[step]);
