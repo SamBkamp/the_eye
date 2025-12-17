@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
+
+#include "formatting.h"
 /*
 EXAMPLE EXCHANGE (from wikipedia article {{Simple_Mail_Transfer_Protocol}}):
 S: 220 smtp.example.com ESMTP Postfix
@@ -53,25 +55,6 @@ const char *message_prefixes[] = {
   "QUIT"
 };
 
-typedef struct{
-  uint16_t code_int;
-  char *code;
-  char *content;
-}res_message;
-
-typedef struct{
-  enum message_index prefix;
-  char *message_content;
-}req_message;
-
-typedef struct{
-  char *my_domain;
-  char *from;
-  char *to;
-  char *peer_domain;
-  char *port;
-}config;
-
 int send_body(int fd, char *data){
   if(write(fd, data, strlen(data))<0) return -1;
   return 0;
@@ -86,17 +69,6 @@ int send_directive(int fd, enum message_index step, char *argv){
   strcat(built_message, LINE_END);
 
   write(fd, built_message, strlen(built_message));
-}
-
-int print_response(res_message *res_msg){
-  return printf("%s  %s", res_msg->code, res_msg->content);
-}
-
-int parse_response(res_message *res, char *raw){
-  res->code = raw;
-  *(raw+3) = 0;
-  res->content = raw+4;
-  res->code_int = atoi(res->code);
   return 0;
 }
 
@@ -119,29 +91,16 @@ void free_message_data(res_message *res){
   return;
 }
 
-int read_and_parse(int fd, res_message *res){
-  char *response_data = malloc(1024);
-  int bytes_read = read(fd, response_data, 1023);
-  response_data[bytes_read] = 0;
-
-  if(bytes_read >= 0)
-    parse_response(res, response_data);
-
-  return bytes_read;
-}
-
 
 int connect_to_service(char *domain, char *port){
   struct addrinfo *res;
   int gai, sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfd < 0){
+  if(sockfd < 0)
     return -1;
-  }
 
   gai = get_sockaddr_fqdn(&res, domain, port);
-  if(gai != 0){
+  if(gai != 0)
     return -1;
-  }
 
   if(connect(sockfd, res->ai_addr, res->ai_addrlen)<0){
     freeaddrinfo(res);
@@ -160,11 +119,11 @@ int main(int argc, char* argv[]){
     .peer_domain = "fish",
     .port = "25"
   };
+  char *data = format_data(&cfg);
   res_message res = {0};
   int s_fd;
   enum message_index step = HELO;
   char *serialized_args[] = {cfg.my_domain, cfg.from, cfg.to, NULL, NULL};
-  char *data = "From: \"Bob Example\" <bob@example.org>\r\nTo: \"Alice Example\" <alice@example.com>\r\nDate: Tue, 15 Jan 2008\r\nSubject:Test message\r\n\r\nHello Alice.\r\nThis is a test message!\r\n.\r\n";
 
 
   s_fd = connect_to_service(cfg.peer_domain, cfg.port);

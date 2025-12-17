@@ -1,4 +1,4 @@
 
 
-a.out:main.c
-	gcc main.c -ggdb -o a.out
+a.out:main.c formatting.c
+	gcc main.c formatting.c -Wall -ggdb -o a.out
