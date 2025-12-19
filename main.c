@@ -124,6 +124,7 @@ int main(int argc, char* argv[]){
 
   while(step <= QUIT){
     send_directive(&cfg, step, serialized_args[step]);
+    printf("%s%s%s", message_prefixes[step], serialized_args[step], LINE_END);
 
     read_and_parse(&cfg, &res);
     print_response(&res);
