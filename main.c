@@ -12,6 +12,7 @@
 #include "formatting.h"
 #include "connections.h"
 #include "ping.h"
+#include "config.h"
 /*
 EXAMPLE EXCHANGE (from wikipedia article {{Simple_Mail_Transfer_Protocol}}):
 S: 220 smtp.example.com ESMTP Postfix
@@ -42,6 +43,7 @@ S: 221 Bye
  */
 
 #define LINE_END "\r\n"
+#define STEPS_LEN 5 //the amount of steps (which needs to match the length of message_index and message_prefixes)
 
 enum message_index{
   HELO,
@@ -99,14 +101,18 @@ int main(int argc, char* argv[]){
   char *data;
   res_message res = {0};
   enum message_index step = HELO;
-  config cfg = {
-    .my_domain = "bonnekamp.com",
-    .from = "<sam@bonnekamp.com>",
-    .to = "<sam@sam-bonnekamp.com>",
-    .peer_domain = "aspmx.l.google.com",
-    .port = "25"
-  };
-  char *serialized_args[] = {cfg.my_domain, cfg.from, cfg.to, NULL, NULL};
+  config cfg = {0};
+  char *serialized_args[STEPS_LEN] = {0};
+
+  if(open_config(&cfg, "config.cfg")<0){
+    perror("couldn't open config file");
+    return EXIT_FAILURE;
+  }
+
+  //serialize the arguments so that we can step through them
+  serialized_args[0] = cfg.my_domain;
+  serialized_args[1] = cfg.from;
+  serialized_args[2] = cfg.to;
 
   if(ping_result < 0)
     data = format_data(&cfg, "your server is down!");

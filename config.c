@@ -5,14 +5,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-typedef struct{
-  char *my_domain;
-  char *from;
-  char *to;
-  char *peer_domain;
-  char *port;
-}config;
-
+#include "formatting.h"
+#include "config.h"
 #define BUFFER_SIZE 1024
 
 int open_config(config *cfg, char *filename){
@@ -72,16 +66,5 @@ int open_config(config *cfg, char *filename){
 
     tok = strtok(NULL, "\n");
   }
-
-}
-
-
-int main(int argc, char* argv[]){
-  config cfg;
-  open_config(&cfg, "config.cfg");
-  printf("domain: %s\n", cfg.my_domain);
-  printf("from: %s\n", cfg.from);
-  printf("to: %s\n", cfg.to);
-  printf("peer_domain: %s\n", cfg.peer_domain);
-  printf("port: %s\n", cfg.port);
+  return 0;
 }
