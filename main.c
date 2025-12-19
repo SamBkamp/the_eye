@@ -104,6 +104,10 @@ int main(int argc, char* argv[]){
   config cfg = {0};
   char *serialized_args[STEPS_LEN] = {0};
 
+  //if there is any argument and the ping is successful just dip
+  if(argc > 1 && ping_result >= 0)
+    return EXIT_SUCCESS;
+
   if(open_config(&cfg, "config.cfg")<0){
     perror("couldn't open config file");
     return EXIT_FAILURE;
