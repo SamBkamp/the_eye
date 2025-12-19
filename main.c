@@ -51,6 +51,7 @@ enum message_index{
   QUIT
 };
 
+
 const char *message_prefixes[] = {
   "HELO ",
   "MAIL FROM:",
@@ -84,7 +85,7 @@ int send_directive(int fd, enum message_index step, char *argv){
 
 
 int main(int argc, char* argv[]){
-  int ping_result = ping("sam-bonnekamp.com"), s_fd;
+  int ping_result = ping("sam-bonnekamp.com");
   char *data;
   res_message res = {0};
   enum message_index step = HELO;
@@ -102,28 +103,30 @@ int main(int argc, char* argv[]){
   else
     data = format_data(&cfg, "Hi Sam,\r\n your server is up :3\r\nGreetings: your server");
 
-  s_fd = connect_to_service(cfg.peer_domain, cfg.port);
-  if(s_fd < 0){
+
+
+  cfg.fd = connect_to_service(cfg.peer_domain, cfg.port);
+  if(cfg.fd < 0){
     perror("connecting to service");
     return EXIT_FAILURE;
   }
 
-  read_and_parse(s_fd, &res);
+  read_and_parse(cfg.fd, &res);
   print_response(&res);
   free_message_data(&res);
 
 
   //upgrade to ssl connection
-  SSL *ssl = upgrade_connection(s_fd);
-  if(!ssl)
+  cfg.ssl = upgrade_connection(cfg.fd);
+  if(!cfg.ssl)
     return EXIT_FAILURE;
 
 
   while(step <= QUIT){
-    send_directive(s_fd, step, serialized_args[step]);
+    send_directive(cfg.fd, step, serialized_args[step]);
     //send_directive(fileno(stdout), step, serialized_args[step]);
 
-    read_and_parse(s_fd, &res);
+    read_and_parse(cfg.fd, &res);
     print_response(&res);
     if(res.code_int != 220 && res.code_int != 250 && res.code_int != 354){
       puts("something went wrong");
@@ -134,7 +137,7 @@ int main(int argc, char* argv[]){
 
     free_message_data(&res);
     if(step == DATA)
-      send_body(s_fd, data);
+      send_body(cfg.fd, data);
 
     step++;
   }

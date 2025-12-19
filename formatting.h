@@ -1,6 +1,7 @@
 #ifndef EYE_FORMATTING
 #define EYE_FORMATTING
 
+#include <openssl/ssl.h>
 
 typedef struct{
   uint16_t code_int;
@@ -14,6 +15,8 @@ typedef struct{
   char *to;
   char *peer_domain;
   char *port;
+  SSL *ssl;
+  int fd;
 }config;
 
 int read_and_parse(int fd, res_message *res);
