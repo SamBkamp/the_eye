@@ -84,7 +84,10 @@ int send_directive(config *cfg, enum message_index step, char *argv){
   char built_message[1024];
   size_t bytes_printed;
   int retval;
-  if(argv != NULL)
+
+  if(step == HELO) //dumb hack bc googles smtp service isn't very permissive
+    bytes_printed = snprintf(built_message, 1024, "%s %s\r\n", message_prefixes[step], argv);
+  else if(argv != NULL)
     bytes_printed = snprintf(built_message, 1024, "%s<%s>\r\n", message_prefixes[step], argv);
   else
     bytes_printed = snprintf(built_message, 1024, "%s\r\n", message_prefixes[step]);
