@@ -125,29 +125,34 @@ int main(int argc, char* argv[]){
   free_message_data(&res);
 
 
-  //upgrade to ssl connection
-  cfg.ssl = upgrade_connection(cfg.fd);
-  if(!cfg.ssl)
-    return EXIT_FAILURE;
-
 
   while(step <= QUIT){
     send_directive(&cfg, step, serialized_args[step]);
-    //send_directive(fileno(stdout), step, serialized_args[step]);
 
     read_and_parse(&cfg, &res);
     print_response(&res);
+
     if(res.code_int != 220 && res.code_int != 250 && res.code_int != 354){
       puts("something went wrong");
       printf("got code: %d\n", res.code_int);
       free_message_data(&res);
       break;
     }
-
     free_message_data(&res);
-    if(step == DATA)
-      send_body(&cfg, data);
 
+    //step specific work
+    switch(step){
+    case HELO:
+      cfg.ssl = upgrade_connection(cfg.fd);
+      if(!cfg.ssl)
+        return EXIT_FAILURE;
+      break;
+    case DATA:
+      send_body(&cfg, data);
+      break;
+    default:
+      break;
+    }
     step++;
   }
   return EXIT_SUCCESS;
