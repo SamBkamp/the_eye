@@ -112,8 +112,6 @@ int main(int argc, char* argv[]){
   else
     data = format_data(&cfg, "Hi Sam,\r\n your server is up :3\r\nGreetings: your server");
 
-
-
   cfg.fd = connect_to_service(cfg.peer_domain, cfg.port);
   if(cfg.fd < 0){
     perror("connecting to service");
@@ -123,8 +121,6 @@ int main(int argc, char* argv[]){
   read_and_parse(&cfg, &res);
   print_response(&res);
   free_message_data(&res);
-
-
 
   while(step <= QUIT){
     send_directive(&cfg, step, serialized_args[step]);
