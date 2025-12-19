@@ -44,6 +44,7 @@ int open_config(config *cfg, char *filename){
       continue;
     }
 
+    //DRY final boss
     *delim = 0;
     if(strcmp(tok, "my_domain")==0){
       cfg->my_domain = malloc(strlen(++delim));
@@ -52,6 +53,21 @@ int open_config(config *cfg, char *filename){
     else if(strcmp(tok, "from")==0){
       cfg->from = malloc(strlen(++delim));
       strcpy(cfg->from, delim);
+    }
+    else if(strcmp(tok, "to")==0){
+      cfg->to = malloc(strlen(++delim));
+      strcpy(cfg->to, delim);
+    }
+    else if(strcmp(tok, "peer_domain")==0){
+      cfg->peer_domain = malloc(strlen(++delim));
+      strcpy(cfg->peer_domain, delim);
+    }
+    else if(strcmp(tok, "port")==0){
+      cfg->port = malloc(strlen(++delim));
+      strcpy(cfg->port, delim);
+    }
+    else{
+      printf("unrecognised directive \"%s\"\n", tok);
     }
 
     tok = strtok(NULL, "\n");
@@ -65,4 +81,7 @@ int main(int argc, char* argv[]){
   open_config(&cfg, "config.cfg");
   printf("domain: %s\n", cfg.my_domain);
   printf("from: %s\n", cfg.from);
+  printf("to: %s\n", cfg.to);
+  printf("peer_domain: %s\n", cfg.peer_domain);
+  printf("port: %s\n", cfg.port);
 }
