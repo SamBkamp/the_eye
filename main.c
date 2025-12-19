@@ -82,14 +82,15 @@ void free_message_data(res_message *res){
 int send_directive(config *cfg, enum message_index step, char *argv){
   //you have to send the whole message in one write(), can't split it into multiple writes like http
   char built_message[1024];
+  size_t bytes_printed;
   int retval;
-  strcpy(built_message, message_prefixes[step]);
   if(argv != NULL)
-    strcat(built_message, argv);
-  strcat(built_message, LINE_END);
+    bytes_printed = snprintf(built_message, 1024, "%s<%s>\r\n", message_prefixes[step], argv);
+  else
+    bytes_printed = snprintf(built_message, 1024, "%s\r\n", message_prefixes[step]);
 
   if(!cfg->ssl)
-    retval = write(cfg->fd, built_message, strlen(built_message));
+    retval = write(cfg->fd, built_message, bytes_printed);
   else
     retval = SSL_write(cfg->ssl, built_message, strlen(built_message));
   return retval;
@@ -119,9 +120,9 @@ int main(int argc, char* argv[]){
   serialized_args[2] = cfg.to;
 
   if(ping_result < 0)
-    data = format_data(&cfg, "your server is down!");
+    data = format_data(&cfg, "Hi Sam,\r\nyour server is down :(\r\nGood luck,\r\nyour server");
   else
-    data = format_data(&cfg, "Hi Sam,\r\n your server is up :3\r\nGreetings: your server");
+    data = format_data(&cfg, "Hi Sam,\r\nyour server is up :3\r\nGreetings\r\n your server");
 
   cfg.fd = connect_to_service(cfg.peer_domain, cfg.port);
   if(cfg.fd < 0){
@@ -135,7 +136,10 @@ int main(int argc, char* argv[]){
 
   while(step <= QUIT){
     send_directive(&cfg, step, serialized_args[step]);
-    printf("%s%s%s", message_prefixes[step], serialized_args[step], LINE_END);
+    if(serialized_args[step])
+      printf("%s<%s>\r\n", message_prefixes[step], serialized_args[step]);
+    else
+      printf("%s\r\n", message_prefixes[step]);
 
     read_and_parse(&cfg, &res);
     print_response(&res);

@@ -15,6 +15,7 @@ typedef struct{
   char *to;
   char *peer_domain;
   char *port;
+  char *your_name;
   SSL *ssl;
   int fd;
 }config;

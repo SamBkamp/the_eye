@@ -60,6 +60,10 @@ int open_config(config *cfg, char *filename){
       cfg->port = malloc(strlen(++delim));
       strcpy(cfg->port, delim);
     }
+    else if(strcmp(tok, "your_name")==0){
+      cfg->your_name = malloc(strlen(++delim));
+      strcpy(cfg->your_name, delim);
+    }
     else{
       printf("unrecognised directive \"%s\"\n", tok);
     }

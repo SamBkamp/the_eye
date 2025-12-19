@@ -21,7 +21,7 @@ char *format_data(config *cfg, char *body){
   char time_buffer[100];
 
   format_time(time_buffer, sizeof(time_buffer));
-  snprintf(data, format_len+512, format, cfg->from, cfg->from, cfg->to, cfg->to, time_buffer, "erm", body);
+  snprintf(data, format_len+512, format, cfg->your_name, cfg->from, cfg->to, cfg->to, time_buffer, "server heartbeat", body);
   return data;
 }
 
