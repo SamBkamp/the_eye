@@ -60,10 +60,15 @@ const char *message_prefixes[] = {
   "QUIT"
 };
 
-int send_body(int fd, char *data){
-  if(write(fd, data, strlen(data))<0) return -1;
-  return 0;
+int send_body(config *cfg, char *data){
+  int retval;
 
+  if(!cfg->ssl)
+    retval = write(cfg->fd, data, strlen(data));
+  else
+    retval = SSL_write(cfg->ssl, data, strlen(data));
+
+  return retval;
 }
 
 void free_message_data(res_message *res){
@@ -71,16 +76,20 @@ void free_message_data(res_message *res){
   return;
 }
 
-int send_directive(int fd, enum message_index step, char *argv){
+int send_directive(config *cfg, enum message_index step, char *argv){
   //you have to send the whole message in one write(), can't split it into multiple writes like http
   char built_message[1024];
+  int retval;
   strcpy(built_message, message_prefixes[step]);
   if(argv != NULL)
     strcat(built_message, argv);
   strcat(built_message, LINE_END);
 
-  write(fd, built_message, strlen(built_message));
-  return 0;
+  if(!cfg->ssl)
+    retval = write(cfg->fd, built_message, strlen(built_message));
+  else
+    retval = SSL_write(cfg->ssl, built_message, strlen(built_message));
+  return retval;
 }
 
 
@@ -111,7 +120,7 @@ int main(int argc, char* argv[]){
     return EXIT_FAILURE;
   }
 
-  read_and_parse(cfg.fd, &res);
+  read_and_parse(&cfg, &res);
   print_response(&res);
   free_message_data(&res);
 
@@ -123,10 +132,10 @@ int main(int argc, char* argv[]){
 
 
   while(step <= QUIT){
-    send_directive(cfg.fd, step, serialized_args[step]);
+    send_directive(&cfg, step, serialized_args[step]);
     //send_directive(fileno(stdout), step, serialized_args[step]);
 
-    read_and_parse(cfg.fd, &res);
+    read_and_parse(&cfg, &res);
     print_response(&res);
     if(res.code_int != 220 && res.code_int != 250 && res.code_int != 354){
       puts("something went wrong");
@@ -137,7 +146,7 @@ int main(int argc, char* argv[]){
 
     free_message_data(&res);
     if(step == DATA)
-      send_body(cfg.fd, data);
+      send_body(&cfg, data);
 
     step++;
   }

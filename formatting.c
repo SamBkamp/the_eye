@@ -25,11 +25,16 @@ char *format_data(config *cfg, char *body){
   return data;
 }
 
-int read_and_parse(int fd, res_message *res){
+int read_and_parse(config *cfg, res_message *res){
   char *response_data = malloc(1024);
-  int bytes_read = read(fd, response_data, 1023);
-  response_data[bytes_read] = 0;
+  int bytes_read;
 
+  if(!cfg->ssl)
+    bytes_read = read(cfg->fd, response_data, 1023);
+  else
+    bytes_read = SSL_read(cfg->ssl, response_data, 1023);
+
+  response_data[bytes_read] = 0;
   if(bytes_read >= 0)
     parse_response(res, response_data);
 
