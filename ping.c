@@ -17,19 +17,19 @@ int ping(char *fqdn){
   int sock = connect_to_service(fqdn, "80");
   
   if(sock < 0){
-    perror("couldn't connect to server");
+    perror("couldn't connect to server targeted");
     return -1;
   }
   
   bytes_written = write(sock, res, bytes_printed);
   if(bytes_written < 0){
-    perror("couldn't write");
+    perror("couldn't write to targeted server");
     return -1;
   }
   
   bytes_read = read(sock, res, 1023);
   if(bytes_read < 0){
-    perror("couldn't read");
+    perror("couldn't read from targeted server");
     return -1;
   }
   /*

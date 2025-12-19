@@ -48,11 +48,13 @@ SSL *upgrade_connection(int fd){
   SSL_CTX *ctx;
   SSL *ssl;
 
+  fputs(upgrade, stdout);
+
   //send upgrade request message
-  write(fd, upgrade, sizeof(upgrade));
+  write(fd, upgrade, strlen(upgrade));
   r = read(fd, return_data, 1023);
   return_data[r] = 0;
-  puts(return_data);
+  fputs(return_data, stdout);
 
   SSL_load_error_strings();
   ctx = SSL_CTX_new(TLS_client_method());

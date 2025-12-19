@@ -68,6 +68,7 @@ int send_body(config *cfg, char *data){
   else
     retval = SSL_write(cfg->ssl, data, strlen(data));
 
+  fputs(data, stdout);
   return retval;
 }
 
@@ -100,9 +101,9 @@ int main(int argc, char* argv[]){
   enum message_index step = HELO;
   config cfg = {
     .my_domain = "bonnekamp.com",
-    .from = "<test@bonnekamp.com>",
-    .to = "<sam@fish>",
-    .peer_domain = "fish",
+    .from = "<sam@bonnekamp.com>",
+    .to = "<sam@sam-bonnekamp.com>",
+    .peer_domain = "aspmx.l.google.com",
     .port = "25"
   };
   char *serialized_args[] = {cfg.my_domain, cfg.from, cfg.to, NULL, NULL};
@@ -146,6 +147,8 @@ int main(int argc, char* argv[]){
       break;
     case DATA:
       send_body(&cfg, data);
+      read_and_parse(&cfg, &res);
+      print_response(&res);
       break;
     default:
       break;
